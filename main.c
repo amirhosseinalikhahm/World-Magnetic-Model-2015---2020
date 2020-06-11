@@ -8,13 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <list>
-#include <string>
-#include <iomanip>
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <cstdlib>
 #include "WMM.h"
 
 int main(){
@@ -24,10 +17,12 @@ int main(){
 	struct tm * timeinfo; 
 	time (&my_time);
 	timeinfo = localtime (&my_time);
-	WorldMagneticModel(&now, 15, 15, 500, timeinfo->tm_year+1900);// Lat, Lon, Alt, Time
+	double lat = 15.8;
+	double lon = 15.6;
+	WorldMagneticModel(&now, lat, lon, 500, timeinfo->tm_year+1900);// Lat, Lon, Alt, Time
 	printf("\nInitializing the World Magnetic Model Test:");
-	printf("\nThe latitude = 15");
-	printf("\nThe longitude = 15");
+	printf("\nThe latitude = %f", lat);
+	printf("\nThe longitude = %f", lon);
 	printf("\nThe Altitude = 500");
 	printf("\nThe year = %d",timeinfo->tm_year+1900);
 	printf("\nThe World Magnetic Model Test successfull ...\n");
