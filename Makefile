@@ -1,2 +1,2 @@
 all: 
-	g++ -O3 -std=c++11 "WMM.c" "main.c" -o WMM -lm
+	gcc -O3 -std=c11 WMM.c main.c -o WMM -lm
