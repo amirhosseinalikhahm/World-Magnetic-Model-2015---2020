@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include "WMM.h"
+#include "wmm.h"
 
 int main(){
 	
@@ -19,7 +19,19 @@ int main(){
 	timeinfo = localtime (&my_time);
 	double lat = 15.8;
 	double lon = 15.6;
-	WorldMagneticModel(&now, lat, lon, 500, timeinfo->tm_year+1900);// Lat, Lon, Alt, Time
+
+	char buffer[1024*1024];
+	FILE *wmmtemp = fopen("wmm.cof","rb");
+	if (wmmtemp == NULL){
+		fprintf(stderr, "Error opening model file WMM.COF\n");
+		exit(1);
+	}
+
+	fread(buffer, 1, sizeof(buffer), wmmtemp);
+	fclose(wmmtemp);
+
+
+	WorldMagneticModel(buffer, &now, lat, lon, 500, timeinfo->tm_year+1900);// Lat, Lon, Alt, Time
 	printf("\nInitializing the World Magnetic Model Test:");
 	printf("\nThe latitude = %f", lat);
 	printf("\nThe longitude = %f", lon);

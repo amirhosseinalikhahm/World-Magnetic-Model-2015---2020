@@ -9,7 +9,9 @@
 
 #ifndef __WMM_H__
 #define __WMM_H__
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef struct {
     double X;		//nT		
     double Y;		//nT		
@@ -22,13 +24,15 @@ typedef struct {
     double F;		//nT
 } geomag_vector;
 
-void WorldMagneticModel(geomag_vector *inout, double dlat,double dlon,double altm,double time);
+void WorldMagneticModel(const char* cof_data, geomag_vector *inout, double dlat,double dlon,double altm,double time);
 //dlat is LATITUDE (IN DECIMAL DEGREES): North latitude positive & South latitude negative. (i.e. 25.5 for 25 degrees 30 minutes north.)
 //dlon is LONGITUDE (IN DECIMAL DEGREES): East longitude positive & West negative. (i.e.- 100.0 for 100.0 degrees west.)
 //altm is ALTITUDE (IN KILOMETERS): ABOVE WGS84 ELLIPSOID.
 //time (IN DECIMAL YEAR): 2015 - 2020
 
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

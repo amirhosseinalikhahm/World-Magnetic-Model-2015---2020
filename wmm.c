@@ -11,7 +11,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
-#include "WMM.h"
+#include "wmm.h"
 
 #define NaN log(-1.0)
 
@@ -20,11 +20,10 @@ static int my_isnan(double d)
   return (d != d);              /* IEEE: only NaN is not equal to itself */
 }
 
-static void geomag(int *maxdeg);
-static void geomg1(double alt, double glat, double glon, double time, double *dec, double *dip, double *ti, double *gv);
+static void geomag(const char* cof_data, int *maxdeg);
+static void geomg1(const char* cof_data, double alt, double glat, double glon, double time, double *dec, double *dip, double *ti, double *gv);
 
-void WorldMagneticModel(geomag_vector *inout, double dlat,double dlon,double altm,double time){
-	
+void WorldMagneticModel(const char* cof_data, geomag_vector *inout, double dlat,double dlon,double altm,double time){
 	memset(inout, 0, sizeof(geomag_vector));
 	inout->X = 0;
 	inout->Y = 0;
@@ -50,19 +49,11 @@ void WorldMagneticModel(geomag_vector *inout, double dlat,double dlon,double alt
 	double epochrange = 5.0;
 	double warn_H_val, warn_H_strong_val;
 	double dmin, imin, ddeg, ideg;
-	FILE *wmmtemp;
-	wmmtemp = fopen("WMM.COF","r");
-	if (wmmtemp == NULL){
-		fprintf(stderr, "Error opening model file WMM.COF\n");
-		exit(1);
-	}
 
-	fgets(d_str, 80, wmmtemp);
-	if (sscanf(d_str,"%lf%s",&epochlowlim,modl) < 2){
-		fprintf(stderr, "Invalid header in model file WMM.COF\n");
+	if (sscanf(cof_data, "%lf%s",&epochlowlim,modl) < 2){
+		fprintf(stderr, "Invalid header in model data.\n");
 		exit(1);
 	}
-	fclose(wmmtemp);
 	
 	maxdeg = 12;
     warn_H = 0;
@@ -70,16 +61,16 @@ void WorldMagneticModel(geomag_vector *inout, double dlat,double dlon,double alt
     warn_H_strong = 0;
     warn_H_strong_val = 99999.0;
     warn_P = 0;
-    geomag(&maxdeg);
+    geomag(cof_data, &maxdeg);
 	
-    geomg1(alt,dlat,dlon,time,&dec,&dip,&ti,&gv);
+    geomg1(cof_data, alt,dlat,dlon,time,&dec,&dip,&ti,&gv);
     time1 = time;
     dec1 = dec;
     dip1 = dip;
     ti1 = ti;
     time = time1 + 1.0;
       
-    geomg1(alt,dlat,dlon,time,&dec,&dip,&ti,&gv);
+    geomg1(cof_data, alt,dlat,dlon,time,&dec,&dip,&ti,&gv);
     time2 = time;
     dec2 = dec;
     dip2 = dip;
@@ -158,13 +149,13 @@ void WorldMagneticModel(geomag_vector *inout, double dlat,double dlon,double alt
 	inout->X = x1;	
 	inout->Y = y1;	
 	inout->Z = z1;	
-	inout->decld = ddeg;	
-	inout->declm = dmin;	
-	inout->incld = ideg;	
-	inout->inclm = imin;		
+	inout->decld = ddeg;
+	inout->declm = dmin;
+	inout->incld = ideg;
+	inout->inclm = imin;
 }
 
-static void E0000(int IENTRY, int *maxdeg, double alt, double glat, double glon, double time, double *dec, double *dip, double *ti, double *gv)
+static void E0000(const char* cof_data, int IENTRY, int *maxdeg, double alt, double glat, double glon, double time, double *dec, double *dip, double *ti, double *gv)
 {
   static int maxord,i,icomp,n,m,j,D1,D2,D3,D4;
   static double c[13][13],cd[13][13],tc[13][13],dp[13][13],snorm[169],
@@ -173,21 +164,14 @@ static void E0000(int IENTRY, int *maxdeg, double alt, double glat, double glon,
     olat,olon,dt,rlon,rlat,srlon,srlat,crlon,crlat,srlat2,
     crlat2,q,q1,q2,ct,st,r2,r,d,ca,sa,aor,ar,br,bt,bp,bpp,
     par,temp1,temp2,parp,bx,by,bz,bh;
-  static char model[20], c_str[81], c_new[5];
+  static char model[20], c_new[5];
+  const char* c_str;
   static double *p = snorm;
   char answer;
   
-  FILE *wmmdat;
-
   switch(IENTRY){case 0: goto GEOMAG; case 1: goto GEOMG1;}
   
  GEOMAG:
-  wmmdat = fopen("WMM.COF","r");
-  if (wmmdat == NULL) 
-    {
-      fprintf(stderr, "Error opening model file WMM.COF\n");
-      exit(1);
-    }
   
 /* INITIALIZE CONSTANTS */
   maxord = *maxdeg;
@@ -208,15 +192,27 @@ static void E0000(int IENTRY, int *maxdeg, double alt, double glat, double glon,
   c[0][0] = 0.0;
   cd[0][0] = 0.0;
   
-  fgets(c_str, 80, wmmdat);
+  c_str = cof_data;
+  cof_data = strchr(cof_data, '\n');
   if (sscanf(c_str,"%lf%s",&epoch,model) < 2) 
    {
-       fprintf(stderr, "Invalid header in model file WMM.COF\n");
+       fprintf(stderr, "Invalid header in model data.\n");
        exit(1);
    }
 
  S3:
-  if (fgets(c_str, 80, wmmdat) == NULL) goto S4;
+  c_str = cof_data;
+  cof_data = strchr(cof_data, '\n');
+  if (cof_data)
+    cof_data++; // skip \n
+
+  int len = cof_data-c_str;
+
+  if (len == 0)
+    return;
+
+  if (!c_str)
+   goto S4;
 
 /* CHECK FOR LAST LINE IN FILE */
   for (i=0; i<4 && (c_str[i] != '\0'); i++)
@@ -232,7 +228,7 @@ static void E0000(int IENTRY, int *maxdeg, double alt, double glat, double glon,
   if (n > maxord) goto S4;
   if (m > n || m < 0.0) 
     {
-      fprintf(stderr, "Corrupt record in model file WMM.COF\n");
+      fprintf(stderr, "Corrupt record in model data.\n");
       exit(1);
     }
 
@@ -276,7 +272,6 @@ static void E0000(int IENTRY, int *maxdeg, double alt, double glat, double glon,
   k[1][1] = 0.0;
   
   otime = oalt = olat = olon = -1000.0;
-  fclose(wmmdat);
   return;
   
 /*************************************************************************/
@@ -437,13 +432,13 @@ static void E0000(int IENTRY, int *maxdeg, double alt, double glat, double glon,
 }
 
 /*************************************************************************/
-void geomag(int *maxdeg)
+void geomag(const char* cof_data, int *maxdeg)
 {
-  E0000(0,maxdeg,0.0,0.0,0.0,0.0,NULL,NULL,NULL,NULL);
+  E0000(cof_data, 0,maxdeg,0.0,0.0,0.0,0.0,NULL,NULL,NULL,NULL);
 }
 
 /*************************************************************************/
-void geomg1(double alt, double glat, double glon, double time, double *dec, double *dip, double *ti, double *gv)
+void geomg1(const char* cof_data, double alt, double glat, double glon, double time, double *dec, double *dip, double *ti, double *gv)
 {
-  E0000(1,NULL,alt,glat,glon,time,dec,dip,ti,gv);
+  E0000(cof_data, 1,NULL,alt,glat,glon,time,dec,dip,ti,gv);
 }
